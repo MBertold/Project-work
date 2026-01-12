@@ -155,7 +155,7 @@ def main():
     # 1. Unemployment Analysis
     # 1. Unemployment Analysis
     st.header("1. Disoccupazione: Giovani vs Totale")
-    st.markdown("Confronto tra il tasso di disoccupazione dei giovani (15-24) e quello della popolazione totale.")
+    st.markdown("Confronto tra il tasso di disoccupazione dei giovani (15-29) e quello della popolazione totale.")
     
     if not df_unemp.empty:
         # Data is already filtered by SQL query
