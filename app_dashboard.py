@@ -1,10 +1,10 @@
 """
-Eurostat Generation Gap Dashboard
+Dashboard del Gap Generazionale Eurostat
 ---------------------------------
-A Streamlit application to visualize the economic gap between generations.
-Connects to a PostgreSQL database to retrieve pre-processed Eurostat data.
+Un'applicazione Streamlit per visualizzare il divario economico tra le generazioni.
+Si connette a un database PostgreSQL per recuperare dati Eurostat pre-elaborati.
 
-Run with: streamlit run app_dashboard.py
+Esegui con: streamlit run app_dashboard.py
 """
 
 import streamlit as st
@@ -16,21 +16,21 @@ import logging
 from db_config import get_db_engine
 from country_codes import eurostat_dictionary
 
-# Configure Logging
+# Configura Logging
 logging.basicConfig(level=logging.INFO)
 
-# Page Config
+# Configurazione Pagina
 st.set_page_config(page_title="Analisi del Gap Generazionale", layout="wide")
 
 @st.cache_resource
 def get_db_engine_cached():
-    """Returns a cached database engine connection."""
+    """Restituisce una connessione al database engine nella cache."""
     return get_db_engine()
 
 @st.cache_data
 def get_data_from_db(query):
     """
-    Executes a SQL query and returns the result as a DataFrame.
+    Esegue una query SQL e restituisce il risultato come DataFrame.
     """
     try:
         engine = get_db_engine_cached()
@@ -46,12 +46,12 @@ def main():
     e la popolazione generale/generazioni più anziane.
     """)
 
-    # --- Sidebar Filters ---
+    # --- Filtri Sidebar ---
     st.sidebar.header("Filtri")
     
-    # 1. Fetch available countries and years first (Lightweight queries)
-    # We query specific columns to avoid loading entire datasets just for filters
-    # Note: Using 'unemployment' as the base for country/year range as it's a key dataset
+    # 1. Recupera prima paesi e anni disponibili (Query leggere)
+    # Interroghiamo colonne specifiche per evitare di caricare interi dataset solo per i filtri
+    # Nota: Usiamo 'unemployment' come base per il range paese/anno dato che è un dataset chiave
     try:
         filter_query = "SELECT DISTINCT geo, year FROM unemployment"
         df_filters = get_data_from_db(filter_query)
@@ -65,16 +65,16 @@ def main():
             min_year, max_year = 2010, 2023
         min_year, max_year = 2010, 2023
     except:
-        # Fallback if table doesn't exist yet
+        # Fallback se la tabella non esiste ancora
         all_countries = []
         min_year, max_year = 2010, 2023
     
-    # 2. Fetch available age ranges for filtering
-    # Removed as per user request (Hardcoded Under 30 vs Total)
+    # 2. Recupera fasce d'età disponibili per il filtro
+    # Rimosso come richiesto dall'utente (Hardcoded Under 30 vs Totale)
 
 
-    # Country Filter
-    # Default to a few major ones if available
+    # Filtro Paese
+    # Default su alcuni principali se disponibili
     default_selection = [c for c in ['IT', 'FR', 'DE', 'ES', 'EU27_2020'] if c in all_countries]
     if not default_selection and all_countries:
         default_selection = all_countries[:3]
@@ -90,52 +90,52 @@ def main():
         st.warning("Seleziona almeno un paese.")
         return
 
-    # Year Range Filter
+    # Filtro Intervallo Anni
     selected_years = st.sidebar.slider("Seleziona Intervallo Anni", min_year, max_year, (min_year, max_year))
 
-    # Age Filter REMOVED
+    # Filtro Età RIMOSSO
     # selected_ages = st.sidebar.multiselect("Seleziona Fasce d'Età (Disoccupazione/Povertà)", all_ages, default=default_age)
     
-    # Format list for SQL IN clause
+    # Formatta lista per clausola SQL IN
     countries_sql = "'" + "','".join(selected_countries) + "'"
     # ages_sql = "'" + "','".join(selected_ages) + "'"
 
-    # --- Data Loading with Explicit Queries ---
+    # --- Caricamento Dati con Query Esplicite ---
     
-    # Query 1: Unemployment
-    # Fetching only relevant data for selected filters
+    # Query 1: Disoccupazione
+    # Recupero solo dati rilevanti per i filtri selezionati
     query_unemp = f"""
         SELECT geo, year, age, value 
         FROM unemployment 
         WHERE geo IN ({countries_sql}) 
         AND year BETWEEN {selected_years[0]} AND {selected_years[1]}
-        AND age IN ('Y15-29', 'Y15-74') -- Under 30 vs Total (Active Population Y15-74 is standard for Total rate)
+        AND age IN ('Y15-29', 'Y15-74') -- Under 30 vs Totale (Popolazione Attiva Y15-74 è standard per tasso Totale)
         AND sex = 'T'
         AND unit = 'PC_ACT'
     """
     df_unemp = get_data_from_db(query_unemp)
 
-    # Query 2: Poverty
-    # Fetching for the latest selected year
+    # Query 2: Povertà
+    # Recupero per l'ultimo anno selezionato
     query_poverty = f"""
         SELECT geo, year, 
                CASE 
-                   WHEN age IN ('Y25-54', 'Y50-64') THEN 'Y25-64' -- Approximation for 30-70
+                   WHEN age IN ('Y25-54', 'Y50-64') THEN 'Y25-64' -- Approssimazione per 30-70
                    ELSE age 
                END as age_group,
                sex, unit, AVG(value) as value
         FROM poverty_risk 
         WHERE geo IN ({countries_sql}) 
         AND year = {selected_years[1]}
-        AND age IN ('Y16-29', 'Y25-54', 'Y50-64') -- Youth vs Middle Age
+        AND age IN ('Y16-29', 'Y25-54', 'Y50-64') -- Giovani vs Età Media
         AND sex = 'T'
-        AND unit = 'PC' -- Percentage
+        AND unit = 'PC' -- Percentuale
         GROUP BY geo, year, age_group, sex, unit
     """
     df_poverty = get_data_from_db(query_poverty)
 
-    # Query 3: Leaving Home
-    # Fetching for the latest available year in range (or just latest)
+    # Query 3: Uscita di Casa
+    # Recupero per l'ultimo anno disponibile nell'intervallo (o semplicemente l'ultimo)
     query_home = f"""
         SELECT geo, year, value 
         FROM leaving_home 
@@ -143,33 +143,33 @@ def main():
         AND sex = 'T'
         AND unit = 'AVG'
     """
-    # Note: For leaving home we might want to see all countries for context, or just selected? 
-    # Let's keep fetching all to do the highlight comparison, or filtering if the user prefers.
-    # The previous logic showed all countries with highlighting. 
-    # Let's optimize to fetch all for the latest year to maintain that visual.
+    # Nota: Per l'uscita di casa potremmo voler vedere tutti i paesi per contesto, o solo i selezionati? 
+    # Continuiamo a recuperare tutto per fare il confronto evidenziato.
+    # La logica precedente mostrava tutti i paesi con evidenziazione.
+    # Ottimizziamo recuperando tutto per l'ultimo anno per mantenere quella visuale.
     df_home = get_data_from_db(query_home)
 
 
-    # --- Visualizations ---
+    # --- Visualizzazioni ---
 
-    # 1. Unemployment Analysis
-    # 1. Unemployment Analysis
+    # 1. Analisi Disoccupazione
+    # 1. Analisi Disoccupazione
     st.header("1. Disoccupazione: Giovani vs Totale")
     st.markdown("Confronto tra il tasso di disoccupazione dei giovani (15-29) e quello della popolazione totale.")
     
     if not df_unemp.empty:
-        # Data is already filtered by SQL query
+        # I dati sono già filtrati dalla query SQL
         filtered_unemp = df_unemp
         
-        # Ensure 'value' is numeric
+        # Assicura che 'value' sia numerico
         filtered_unemp = filtered_unemp.copy()
         filtered_unemp['value'] = pd.to_numeric(filtered_unemp['value'], errors='coerce')
         
-        # Map geo code to name
+        # Mappa codice geo al nome
         filtered_unemp['country_name'] = filtered_unemp['geo'].map(eurostat_dictionary).fillna(filtered_unemp['geo'])
         
         if not filtered_unemp.empty:
-            # Map codes to readable labels
+            # Mappa codici a etichette leggibili
             label_map = {'Y15-29': 'Giovani (15-29)', 'Y15-74': 'Totale (15-74)'}
             filtered_unemp['age_label'] = filtered_unemp['age'].map(label_map).fillna(filtered_unemp['age'])
             
@@ -186,16 +186,16 @@ def main():
     else:
         st.info("Nessun dato sulla disoccupazione disponibile.")
 
-    # 2. Poverty Risk Analysis
-    # 2. Poverty Risk Analysis
+    # 2. Analisi Rischio Povertà
+    # 2. Analisi Rischio Povertà
     st.header("2. Rischio di Povertà")
     st.markdown("Percentuale della popolazione a rischio di povertà per fascia d'età (Focus: Giovani vs Anziani).")
     
     if not df_poverty.empty:
-        # Data is already filtered by SQL query (for latest year and countries)
+        # I dati sono già filtrati dalla query SQL (per ultimo anno e paesi)
         filtered_pov = df_poverty
         
-        # Determine the year we actually fetched (from the data)
+        # Determina l'anno effettivamente recuperato (dai dati)
         latest_year = filtered_pov['year'].max() if not filtered_pov.empty else selected_years[1]
         
         if not filtered_pov.empty:
@@ -222,20 +222,20 @@ def main():
     else:
         st.info("Nessun dato sulla povertà disponibile.")
 
-    # 3. Leaving Home Age
-    # 3. Leaving Home Age
+    # 3. Età di Uscita dalla Casa dei Genitori
+    # 3. Età di Uscita dalla Casa dei Genitori
     st.header("3. Età di Uscita dalla Casa dei Genitori")
     st.markdown("Età media stimata in cui i giovani lasciano il nucleo familiare.")
     
     if not df_home.empty:
-        # Latest available year
+        # Ultimo anno disponibile
         latest_home_year = df_home['year'].max()
-        # Compare selected countries vs EU Average (if available) or just between them
-        # For context, let's show all countries but highlight selected
+        # Confronta paesi selezionati vs Media UE (se disponibile) o solo tra loro
+        # Per contesto, mostriamo tutti i paesi ma evidenziamo i selezionati
         
         df_home['color'] = df_home['geo'].apply(lambda x: 'Selezionati' if x in selected_countries else 'Altri')
         df_home['country_name'] = df_home['geo'].map(eurostat_dictionary).fillna(df_home['geo'])
-        # Sort by value
+        # Ordina per valore
         df_home_sorted = df_home.sort_values('value', ascending=False)
 
         fig_home = px.bar(
@@ -251,7 +251,7 @@ def main():
     else:
         st.info("Nessun dato sull'età di uscita di casa.")
 
-    # --- Conclusion / Insights ---
+    # --- Conclusioni / Approfondimenti ---
     st.markdown("---")
     st.subheader("💡 Punti Chiave")
     st.info("""

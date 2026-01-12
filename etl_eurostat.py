@@ -1,13 +1,13 @@
 """
-ETL Script for Eurostat Data
+Script ETL per Dati Eurostat
 ----------------------------
-This script downloads, cleans, and loads the following datasets into a PostgreSQL database:
-1. une_rt_a: Unemployment rate by age
-2. ilc_li02: At-risk-of-poverty rate
-3. yth_demo_030: Average age of leaving parental household
-4. tessi161: Housing cost overburden rate
+Questo script scarica, pulisce e carica i seguenti dataset in un database PostgreSQL:
+1. une_rt_a: Tasso di disoccupazione per età
+2. ilc_li02: Tasso di rischio povertà
+3. yth_demo_030: Età media di uscita dalla casa dei genitori
+4. tessi161: Tasso di sovraccarico del costo dell'alloggio
 
-Requirements:
+Requisiti:
     pip install eurostat pandas sqlalchemy psycopg2-binary
 """
 
@@ -19,20 +19,20 @@ import logging
 from db_config import get_db_engine
 from country_codes import eurostat_dictionary
 
-# Configure Logging
+# Configura Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Database connection is now handled in db_config.py
+# La connessione al database è ora gestita in db_config.py
 
 def fetch_and_clean_data():
     """
-    Fetches data from Eurostat, cleans it, and returns a dictionary of DataFrames.
+    Recupera i dati da Eurostat, li pulisce e restituisce un dizionario di DataFrame.
     """
     datasets = {
         'unemployment': 'une_rt_a',
         'poverty_risk': 'ilc_li02',
         'leaving_home': 'yth_demo_030',
-        'housing_cost': 'tessi161' # Reference for Housing cost overburden rate
+        'housing_cost': 'tessi161' # Riferimento per il tasso di sovraccarico del costo dell'alloggio
     }
 
     cleaned_data = {}
@@ -40,47 +40,47 @@ def fetch_and_clean_data():
     for name, code in datasets.items():
         logging.info(f"Fetching dataset: {name} ({code})...")
         try:
-            # Fetch data as DataFrame
+            # Recupera dati come DataFrame
             df = eurostat.get_data_df(code)
             
-            # Basic Cleaning
-            # 1. Rename 'geo\time' or similar columns to standard 'geo' and melt years
-            # Eurostat library usually returns columns like: unit, age, sex, geo\time, 2022, 2021...
+            # Pulizia Base
+            # 1. Rinomina 'geo\time' o simili in standard 'geo' e trasforma anni
+            # La libreria Eurostat solitamente restituisce colonne come: unit, age, sex, geo\time, 2022, 2021...
             
-            # Identify columns that are not years (usually metadata columns)
-            # They often end with '\time' or are named 'geo', 'unit', etc.
+            # Identifica colonne che non sono anni (solitamente metadati)
+            # Spesso finiscono con '\time' o sono chiamate 'geo', 'unit', ecc.
             id_vars = [col for col in df.columns if not str(col).isdigit() and not isinstance(col, int)]
             
-            # Melt the yearly columns into rows for easier SQL analysis
+            # Fondi le colonne annuali in righe per una più facile analisi SQL
             df_melted = df.melt(id_vars=id_vars, var_name='year', value_name='value')
             
-            # Convert year and value to numeric, coercing errors
+            # Converti anno e valore in numerico, forzando errori
             df_melted['year'] = pd.to_numeric(df_melted['year'], errors='coerce')
             df_melted['value'] = pd.to_numeric(df_melted['value'], errors='coerce')
             
-            # Standardize column names: lowercase and replace specific chars
+            # Standardizza nomi colonne: minuscolo e sostituzione caratteri specifici
             df_melted.columns = [c.lower().replace('\\time', '') for c in df_melted.columns]
             
-            # Rename 'geo' if it exists (sometimes it's purely 'geo', sometimes 'geo\time')
+            # Rinomina 'geo' se esiste (a volte è puramente 'geo', a volte 'geo\time')
             if 'geo' not in df_melted.columns:
-                 # Try to find a column containing 'geo'
+                 # Prova a trovare una colonna che contiene 'geo'
                  geo_col = next((c for c in df_melted.columns if 'geo' in c), None)
                  if geo_col:
                      df_melted.rename(columns={geo_col: 'geo'}, inplace=True)
 
-            # Drop rows with NaN values in critical columns
+            # Rimuovi righe con valori NaN in colonne critiche
             df_melted.dropna(subset=['year', 'value', 'geo'], inplace=True)
             
-            # Specific Filtering Logic based on dataset type
+            # Logica di Filtro Specifica basata sul tipo di dataset
             if name == 'unemployment':
-                # Filter for relevant age groups if 'age' column exists
+                # Filtra per gruppi d'età rilevanti se la colonna 'age' esiste
                 if 'age' in df_melted.columns:
-                    # Keep Y15-24, Y15-29, Y25-74 (Adult comparison), and TOTAL
-                    # Note: You might need to check the actual codes in the data
+                    # Mantieni Y15-24, Y15-29, Y25-74 (Confronto Adulti), e TOTAL
+                    # Nota: Potresti dover controllare i codici effettivi nei dati
                     relevant_ages = ['Y15-24', 'Y15-29', 'Y25-74', 'TOTAL'] 
-                    # Filter only if values are present, to avoid empty df if codes differ
-                    # For simplicity in this generic script, we keep all but log a note
-                    # Real-world: df_melted = df_melted[df_melted['age'].isin(relevant_ages)]
+                    # Filtra solo se i valori sono presenti, per evitare df vuoti se i codici differiscono
+                    # Per semplicità in questo script generico, manteniamo tutto ma logghiamo una nota
+                    # Mondo reale: df_melted = df_melted[df_melted['age'].isin(relevant_ages)]
                     pass
 
             cleaned_data[name] = df_melted
@@ -89,7 +89,7 @@ def fetch_and_clean_data():
         except Exception as e:
             logging.error(f"Error processing {name} ({code}): {e}")
     
-    # Process Country Codes Dictionary
+    # Elabora Dizionario Codici Paese
     try:
         logging.info("Processing Country Codes...")
         df_codes = pd.DataFrame(list(eurostat_dictionary.items()), columns=['geo', 'country_name'])
@@ -102,7 +102,7 @@ def fetch_and_clean_data():
 
 def load_to_postgres(data_dict, engine):
     """
-    Loads the cleaned DataFrames into PostgreSQL.
+    Carica i DataFrame puliti in PostgreSQL.
     """
     for table_name, df in data_dict.items():
         try:
@@ -115,11 +115,11 @@ def load_to_postgres(data_dict, engine):
 if __name__ == "__main__":
     logging.info("Starting ETL process...")
     
-    # 1. Fetch and Clean
+    # 1. Recupera e Pulisci
     data = fetch_and_clean_data()
     
-    # 2. Load to DB
-    # NOTE: We use the config from db_config.py
+    # 2. Carica nel DB
+    # NOTA: Usiamo la configurazione da db_config.py
     try:
         engine = get_db_engine()
         load_to_postgres(data, engine)

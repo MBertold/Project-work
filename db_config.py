@@ -1,7 +1,7 @@
 """
-Database Configuration
+Configurazione Database
 ----------------------
-Centralized configuration for PostgreSQL connection.
+Configurazione centralizzata per la connessione PostgreSQL.
 """
 
 from sqlalchemy import create_engine
@@ -15,21 +15,21 @@ from dotenv import load_dotenv
 import os
 import streamlit as st
 
-# Load environment variables from .env file
+# Carica variabili d'ambiente dal file .env
 load_dotenv()
 
 def get_db_config():
-    """Retrieves database configuration from st.secrets (priority) or .env."""
-    # 1. Try Streamlit Secrets
+    """Recupera configurazione database da st.secrets (priorità) o .env."""
+    # 1. Prova Streamlit Secrets
     try:
         if st.secrets and "postgres" in st.secrets:
             return st.secrets["postgres"]
     except FileNotFoundError:
-        pass # Not running in Streamlit or no secrets.toml
+        pass # Non in esecuzione in Streamlit o secrets.toml mancante
     except Exception:
          pass
 
-    # 2. Fallback to Environment Variables
+    # 2. Fallback su Variabili d'Ambiente
     return {
         'user': os.getenv('DB_USER'),
         'password': os.getenv('DB_PASSWORD'),
@@ -40,19 +40,19 @@ def get_db_config():
     }
 
 def get_db_engine():
-    """Creates and returns a SQLAlchemy engine."""
+    """Crea e restituisce un engine SQLAlchemy."""
     config = get_db_config()
     
-    # Construct URL based on source
-    # Secrets usually come as dict, os.getenv as string. 
-    # Ensure all required keys exist
+    # Costruisci URL basato sulla sorgente
+    # Secrets solitamente arriva come dict, os.getenv come stringa. 
+    # Assicura che tutte le chiavi richieste esistano
     required_keys = ['user', 'password', 'host', 'dbname']
     if not all(key in config and config[key] for key in required_keys):
         # logging.error("Missing database configuration details.")
-        # Only log if strictly necessary to avoid noise during build
+        # Registra solo se strettamente necessario per evitare rumore durante il build
         pass
 
-    # Handle port type (int vs string)
+    # Gestisci tipo porta (int vs string)
     port = str(config.get('port', 5432))
     sslmode = config.get('sslmode', 'require')
     
