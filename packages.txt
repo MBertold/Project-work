@@ -1,0 +1,7 @@
+eurostat
+pandas
+sqlalchemy
+psycopg2-binary
+plotly
+streamlit
+python-dotenv
