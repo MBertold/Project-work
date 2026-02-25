@@ -6,3 +6,4 @@ plotly
 streamlit
 python-dotenv
 altair<5
+imghdr
