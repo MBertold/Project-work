@@ -36,7 +36,9 @@ def get_data_from_db(query):
         engine = get_db_engine_cached()
         return pd.read_sql(query, engine)
     except Exception as e:
-        st.error(f"Error executing query: {query}\nError: {e}")
+        st.error(f"⚠️ SQL Query Error or Database Connection Failed:\n\n{str(e)}")
+        # For debug purposes on cloud, also print the query that failed
+        st.error(f"Query attempted:\n{query}")
         return pd.DataFrame()
 
 def main():
