@@ -181,7 +181,7 @@ def main():
                 title='Tasso di Disoccupazione (Giovani vs Totale)',
                 labels={'value': 'Tasso di Disoccupazione (%)', 'year': 'Anno', 'country_name': 'Paese', 'age_label': 'Fascia Età'}
             )
-        st.plotly_chart(fig_unemp, use_container_width=True) # Fixed deprecation
+        st.plotly_chart(fig_unemp, width='stretch') # Fixed deprecation
     else:
         st.info("Nessun dato sulla disoccupazione disponibile.")
 
@@ -213,7 +213,7 @@ def main():
                 title=f'Tasso di Rischio di Povertà ({latest_year})',
                 labels={'value': 'Tasso (%)', 'country_name': 'Paese', 'age_label': 'Fascia Età'}
             )
-             st.plotly_chart(fig_pov, use_container_width=True) # Fixed deprecation
+             st.plotly_chart(fig_pov, width='stretch') # Fixed deprecation
         else:
             st.warning(f"Nessun dato sulla povertà trovato per i paesi selezionati nell'anno {selected_years[1]}.")
     else:
@@ -244,7 +244,7 @@ def main():
             labels={'value': 'Età (Anni)', 'country_name': 'Paese'},
             color_discrete_map={'Selezionati': 'red', 'Altri': 'lightgrey'}
         )
-        st.plotly_chart(fig_home, use_container_width=True)
+        st.plotly_chart(fig_home, width='stretch')
     else:
         st.info("Nessun dato sull'età di uscita di casa.")
 
