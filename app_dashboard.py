@@ -194,7 +194,7 @@ def main():
     
     if not df_poverty.empty:
         # I dati sono già filtrati dalla query SQL (per ultimo anno e paesi)
-        filtered_pov = df_poverty
+        filtered_pov = df_poverty.copy()
         
         # Determina l'anno effettivamente recuperato (dai dati)
         latest_year = filtered_pov['year'].max() if not filtered_pov.empty else selected_years[1]
@@ -232,6 +232,7 @@ def main():
         # Confronta paesi selezionati vs Media UE (se disponibile) o solo tra loro
         # Per contesto, mostriamo tutti i paesi ma evidenziamo i selezionati
         
+        df_home = df_home.copy()
         df_home['color'] = df_home['geo'].apply(lambda x: 'Selezionati' if x in selected_countries else 'Altri')
         df_home['country_name'] = df_home['geo'].map(eurostat_dictionary).fillna(df_home['geo'])
         # Ordina per valore
