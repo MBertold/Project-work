@@ -10,9 +10,6 @@ import logging
 
 from dotenv import load_dotenv
 import os
-
-from dotenv import load_dotenv
-import os
 import streamlit as st
 
 # Carica variabili d'ambiente dal file .env
