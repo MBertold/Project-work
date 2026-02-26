@@ -55,7 +55,7 @@ def main():
     # Interroghiamo colonne specifiche per evitare di caricare interi dataset solo per i filtri
     # Nota: Usiamo 'unemployment' come base per il range paese/anno dato che è un dataset chiave
     try:
-        filter_query = "SELECT DISTINCT geo, year FROM unemployment"
+        filter_query = "SELECT DISTINCT TRIM(geo) AS geo, year FROM unemployment"
         df_filters = get_data_from_db(filter_query)
         
         if not df_filters.empty:
@@ -106,31 +106,31 @@ def main():
     # Query 1: Disoccupazione
     # Recupero solo dati rilevanti per i filtri selezionati
     query_unemp = f"""
-        SELECT geo, year, age, value 
+        SELECT TRIM(geo) AS geo, year, TRIM(age) AS age, value 
         FROM unemployment 
-        WHERE geo IN ({countries_sql}) 
+        WHERE TRIM(geo) IN ({countries_sql}) 
         AND year BETWEEN {selected_years[0]} AND {selected_years[1]}
-        AND age IN ('Y15-29', 'Y15-74') -- Under 30 vs Totale (Popolazione Attiva Y15-74 è standard per tasso Totale)
-        AND sex = 'T'
-        AND unit = 'PC_ACT'
+        AND TRIM(age) IN ('Y15-29', 'Y15-74') -- Under 30 vs Totale (Popolazione Attiva Y15-74 è standard per tasso Totale)
+        AND TRIM(sex) = 'T'
+        AND TRIM(unit) = 'PC_ACT'
     """
     df_unemp = get_data_from_db(query_unemp)
 
     # Query 2: Povertà
     # Recupero per l'ultimo anno selezionato
     query_poverty = f"""
-        SELECT geo, year, 
+        SELECT TRIM(geo) AS geo, year, 
                CASE 
-                   WHEN age IN ('Y25-54', 'Y50-64') THEN 'Y25-64' -- Approssimazione per 30-70
-                   ELSE age 
+                   WHEN TRIM(age) IN ('Y25-54', 'Y50-64') THEN 'Y25-64' -- Approssimazione per 30-70
+                   ELSE TRIM(age) 
                END as age_group,
-               sex, unit, AVG(value) as value
+               TRIM(sex) AS sex, TRIM(unit) AS unit, AVG(value) as value
         FROM poverty_risk 
-        WHERE geo IN ({countries_sql}) 
+        WHERE TRIM(geo) IN ({countries_sql}) 
         AND year = {selected_years[1]}
-        AND age IN ('Y16-29', 'Y25-54', 'Y50-64') -- Giovani vs Età Media
-        AND sex = 'T'
-        AND unit = 'PC' -- Percentuale
+        AND TRIM(age) IN ('Y16-29', 'Y25-54', 'Y50-64') -- Giovani vs Età Media
+        AND TRIM(sex) = 'T'
+        AND TRIM(unit) = 'PC' -- Percentuale
         GROUP BY geo, year, age_group, sex, unit
     """
     df_poverty = get_data_from_db(query_poverty)
@@ -138,11 +138,11 @@ def main():
     # Query 3: Uscita di Casa
     # Recupero per l'ultimo anno disponibile nell'intervallo (o semplicemente l'ultimo)
     query_home = f"""
-        SELECT geo, year, value 
+        SELECT TRIM(geo) AS geo, year, value 
         FROM leaving_home 
         WHERE year = (SELECT MAX(year) FROM leaving_home WHERE year <= {selected_years[1]})
-        AND sex = 'T'
-        AND unit = 'AVG'
+        AND TRIM(sex) = 'T'
+        AND TRIM(unit) = 'AVG'
     """
     # Nota: Per l'uscita di casa potremmo voler vedere tutti i paesi per contesto, o solo i selezionati? 
     # Continuiamo a recuperare tutto per fare il confronto evidenziato.
