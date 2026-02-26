@@ -191,6 +191,8 @@ def main():
                 if 'Y15-74' in a: return 'Totale (15-74)'
                 return a
             
+            filtered_unemp['age_label'] = filtered_unemp['age'].apply(map_age_unemp)
+            
             # Combina paese + età per avere serie dati indipendenti
             filtered_unemp['Serie'] = filtered_unemp['country_name'] + " - " + filtered_unemp['age_label']
             
