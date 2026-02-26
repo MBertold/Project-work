@@ -162,9 +162,12 @@ def main():
         # I dati sono già filtrati dalla query SQL
         filtered_unemp = df_unemp
         
-        # Assicura che 'value' sia numerico
+        # Assicura che 'value' e 'year' siano numerici, gestendo eventuali virgole
         filtered_unemp = filtered_unemp.copy()
+        if filtered_unemp['value'].dtype == object:
+            filtered_unemp['value'] = filtered_unemp['value'].astype(str).str.replace(',', '.')
         filtered_unemp['value'] = pd.to_numeric(filtered_unemp['value'], errors='coerce')
+        filtered_unemp['year'] = pd.to_numeric(filtered_unemp['year'], errors='coerce')
         
         # Mappa codice geo al nome
         filtered_unemp['country_name'] = filtered_unemp['geo'].map(eurostat_dictionary).fillna(filtered_unemp['geo'])
@@ -195,6 +198,11 @@ def main():
     if not df_poverty.empty:
         # I dati sono già filtrati dalla query SQL (per ultimo anno e paesi)
         filtered_pov = df_poverty.copy()
+        
+        # Assicura numericità per evitare che Plotly tratti i valori come categorie
+        if filtered_pov['value'].dtype == object:
+            filtered_pov['value'] = filtered_pov['value'].astype(str).str.replace(',', '.')
+        filtered_pov['value'] = pd.to_numeric(filtered_pov['value'], errors='coerce')
         
         # Determina l'anno effettivamente recuperato (dai dati)
         latest_year = filtered_pov['year'].max() if not filtered_pov.empty else selected_years[1]
@@ -233,6 +241,10 @@ def main():
         # Per contesto, mostriamo tutti i paesi ma evidenziamo i selezionati
         
         df_home = df_home.copy()
+        if df_home['value'].dtype == object:
+            df_home['value'] = df_home['value'].astype(str).str.replace(',', '.')
+        df_home['value'] = pd.to_numeric(df_home['value'], errors='coerce')
+
         df_home['color'] = df_home['geo'].apply(lambda x: 'Selezionati' if x in selected_countries else 'Altri')
         df_home['country_name'] = df_home['geo'].map(eurostat_dictionary).fillna(df_home['geo'])
         # Ordina per valore
