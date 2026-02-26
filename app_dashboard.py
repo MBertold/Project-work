@@ -177,11 +177,13 @@ def main():
         filtered_unemp['value'] = pd.to_numeric(filtered_unemp['value'], errors='coerce')
         filtered_unemp['year'] = pd.to_numeric(filtered_unemp['year'], errors='coerce')
         
-        # Mappa codice geo al nome
+        # Mappa codice geo al nome, rimuovendo gli spazi vuoti aggiuntivi del db
+        filtered_unemp['geo'] = filtered_unemp['geo'].astype(str).str.strip()
         filtered_unemp['country_name'] = filtered_unemp['geo'].map(eurostat_dictionary).fillna(filtered_unemp['geo'])
         
         if not filtered_unemp.empty:
             # Mappa codici a etichette leggibili
+            filtered_unemp['age'] = filtered_unemp['age'].astype(str).str.strip()
             label_map = {'Y15-29': 'Giovani (15-29)', 'Y15-74': 'Totale (15-74)'}
             filtered_unemp['age_label'] = filtered_unemp['age'].map(label_map).fillna(filtered_unemp['age'])
             
@@ -216,9 +218,11 @@ def main():
         latest_year = filtered_pov['year'].max() if not filtered_pov.empty else selected_years[1]
         
         if not filtered_pov.empty:
+             filtered_pov['geo'] = filtered_pov['geo'].astype(str).str.strip()
              filtered_pov['country_name'] = filtered_pov['geo'].map(eurostat_dictionary).fillna(filtered_pov['geo'])
              
              # Map codes to readable labels
+             filtered_pov['age_group'] = filtered_pov['age_group'].astype(str).str.strip()
              label_map_pov = {'Y16-29': 'Giovani (16-29)', 'Y25-64': 'Adulti (25-64)'}
              filtered_pov['age_label'] = filtered_pov['age_group'].map(label_map_pov).fillna(filtered_pov['age_group'])
              
@@ -253,7 +257,8 @@ def main():
             df_home['value'] = df_home['value'].astype(str).str.replace(',', '.')
         df_home['value'] = pd.to_numeric(df_home['value'], errors='coerce')
 
-        df_home['color'] = df_home['geo'].apply(lambda x: 'Selezionati' if x in selected_countries else 'Altri')
+        df_home['color'] = df_home['geo'].apply(lambda x: 'Selezionati' if str(x).strip() in selected_countries else 'Altri')
+        df_home['geo'] = df_home['geo'].astype(str).str.strip()
         df_home['country_name'] = df_home['geo'].map(eurostat_dictionary).fillna(df_home['geo'])
         # Ordina per valore
         df_home_sorted = df_home.sort_values('value', ascending=False)
