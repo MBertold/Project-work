@@ -156,10 +156,11 @@ def main():
     # 💥 DEBUGGING UI 💥
     if st.sidebar.checkbox("Mostra Dati Grezzi (Local/Cloud Bug)"):
         st.write("### 🛠 DEBUG INFO")
-        st.write("Questi dati mostrano esattamente cosa Streamlit estrae dal Database, e di che tipo di dato si tratta.")
+        st.write("Dati grezzi estratti dal DB:")
         st.write("**Disoccupazione** `df_unemp`:", df_unemp.head(), "\nTipi:", df_unemp.dtypes)
         st.write("**Povertà** `df_poverty`:", df_poverty.head(), "\nTipi:", df_poverty.dtypes)
         st.write("**Casa** `df_home`:", df_home.head(), "\nTipi:", df_home.dtypes)
+        st.write("Selezionati:", selected_countries)
 
     # 1. Analisi Disoccupazione
     # 1. Analisi Disoccupazione
@@ -182,10 +183,16 @@ def main():
         filtered_unemp['country_name'] = filtered_unemp['geo'].map(eurostat_dictionary).fillna(filtered_unemp['geo'])
         
         if not filtered_unemp.empty:
-            # Mappa codici a etichette leggibili
+            # Rimuovi spazi nascosti
             filtered_unemp['age'] = filtered_unemp['age'].astype(str).str.strip()
-            label_map = {'Y15-29': 'Giovani (15-29)', 'Y15-74': 'Totale (15-74)'}
-            filtered_unemp['age_label'] = filtered_unemp['age'].map(label_map).fillna(filtered_unemp['age'])
+            
+            # Map robusto
+            def map_age_unemp(a):
+                if 'Y15-29' in a: return 'Giovani (15-29)'
+                if 'Y15-74' in a: return 'Totale (15-74)'
+                return a
+            
+            filtered_unemp['age_label'] = filtered_unemp['age'].apply(map_age_unemp)
             
             fig_unemp = px.line(
                 filtered_unemp, 
@@ -194,7 +201,8 @@ def main():
                 color='country_name', 
                 line_dash='age_label', 
                 title='Tasso di Disoccupazione (Giovani vs Totale)',
-                labels={'value': 'Tasso di Disoccupazione (%)', 'year': 'Anno', 'country_name': 'Paese', 'age_label': 'Fascia Età'}
+                labels={'value': 'Tasso di Disoccupazione (%)', 'year': 'Anno', 'country_name': 'Paese', 'age_label': 'Fascia Età'},
+                markers=True
             )
         st.plotly_chart(fig_unemp, width='stretch') # Fixed deprecation
     else:
@@ -221,10 +229,13 @@ def main():
              filtered_pov['geo'] = filtered_pov['geo'].astype(str).str.strip()
              filtered_pov['country_name'] = filtered_pov['geo'].map(eurostat_dictionary).fillna(filtered_pov['geo'])
              
-             # Map codes to readable labels
+             # Map robusto
              filtered_pov['age_group'] = filtered_pov['age_group'].astype(str).str.strip()
-             label_map_pov = {'Y16-29': 'Giovani (16-29)', 'Y25-64': 'Adulti (25-64)'}
-             filtered_pov['age_label'] = filtered_pov['age_group'].map(label_map_pov).fillna(filtered_pov['age_group'])
+             def map_age_pov(a):
+                 if 'Y16-29' in a: return 'Giovani (16-29)'
+                 if 'Y25-64' in a: return 'Adulti (25-64)'
+                 return a
+             filtered_pov['age_label'] = filtered_pov['age_group'].apply(map_age_pov)
              
              fig_pov = px.bar(
                 filtered_pov, 
