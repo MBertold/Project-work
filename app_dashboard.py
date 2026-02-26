@@ -152,6 +152,14 @@ def main():
 
 
     # --- Visualizzazioni ---
+    
+    # 💥 DEBUGGING UI 💥
+    if st.sidebar.checkbox("Mostra Dati Grezzi (Local/Cloud Bug)"):
+        st.write("### 🛠 DEBUG INFO")
+        st.write("Questi dati mostrano esattamente cosa Streamlit estrae dal Database, e di che tipo di dato si tratta.")
+        st.write("**Disoccupazione** `df_unemp`:", df_unemp.head(), "\nTipi:", df_unemp.dtypes)
+        st.write("**Povertà** `df_poverty`:", df_poverty.head(), "\nTipi:", df_poverty.dtypes)
+        st.write("**Casa** `df_home`:", df_home.head(), "\nTipi:", df_home.dtypes)
 
     # 1. Analisi Disoccupazione
     # 1. Analisi Disoccupazione
