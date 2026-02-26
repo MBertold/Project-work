@@ -9,7 +9,7 @@ Esegui con: streamlit run app_dashboard.py
 
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import altair as alt
 from sqlalchemy import create_engine
 import logging
 
@@ -194,17 +194,16 @@ def main():
             
             filtered_unemp['age_label'] = filtered_unemp['age'].apply(map_age_unemp)
             
-            fig_unemp = px.line(
-                filtered_unemp, 
-                x='year', 
-                y='value', 
-                color='country_name', 
-                line_dash='age_label', 
-                title='Tasso di Disoccupazione (Giovani vs Totale)',
-                labels={'value': 'Tasso di Disoccupazione (%)', 'year': 'Anno', 'country_name': 'Paese', 'age_label': 'Fascia Età'},
-                markers=True
-            )
-        st.plotly_chart(fig_unemp, width='stretch') # Fixed deprecation
+            chart_unemp = alt.Chart(filtered_unemp).mark_line(point=True).encode(
+                x=alt.X('year:O', title='Anno'),
+                y=alt.Y('value:Q', title='Tasso di Disoccupazione (%)'),
+                color=alt.Color('country_name:N', title='Paese'),
+                strokeDash=alt.StrokeDash('age_label:N', title='Fascia Età'),
+                tooltip=['country_name', 'year', 'age_label', 'value']
+            ).properties(title='Tasso di Disoccupazione (Giovani vs Totale)')
+            st.altair_chart(chart_unemp, use_container_width=True)
+        else:
+            st.info("Nessun dato sulla disoccupazione disponibile per questa configurazione.")
     else:
         st.info("Nessun dato sulla disoccupazione disponibile.")
 
@@ -237,16 +236,15 @@ def main():
                  return a
              filtered_pov['age_label'] = filtered_pov['age_group'].apply(map_age_pov)
              
-             fig_pov = px.bar(
-                filtered_pov, 
-                x='country_name', 
-                y='value', 
-                color='age_label', 
-                barmode='group',
-                title=f'Tasso di Rischio di Povertà ({latest_year})',
-                labels={'value': 'Tasso (%)', 'country_name': 'Paese', 'age_label': 'Fascia Età'}
-            )
-             st.plotly_chart(fig_pov, width='stretch') # Fixed deprecation
+             chart_pov = alt.Chart(filtered_pov).mark_bar().encode(
+                 x=alt.X('age_label:N', title=None, axis=alt.Axis(labels=False, ticks=False)),
+                 y=alt.Y('value:Q', title='Tasso (%)'),
+                 color=alt.Color('age_label:N', title='Fascia Età'),
+                 column=alt.Column('country_name:N', title='Paese', header=alt.Header(labelOrient='bottom', titleOrient='bottom')),
+                 tooltip=['country_name', 'age_label', 'value']
+             ).properties(width=80, title=f'Tasso di Rischio di Povertà ({latest_year})')
+             
+             st.altair_chart(chart_pov, use_container_width=False)
         else:
             st.warning(f"Nessun dato sulla povertà trovato per i paesi selezionati nell'anno {selected_years[1]}.")
     else:
@@ -274,16 +272,13 @@ def main():
         # Ordina per valore
         df_home_sorted = df_home.sort_values('value', ascending=False)
 
-        fig_home = px.bar(
-            df_home_sorted,
-            x='country_name',
-            y='value',
-            color='color',
-            title=f"Età Media di Uscita di Casa ({latest_home_year})",
-            labels={'value': 'Età (Anni)', 'country_name': 'Paese'},
-            color_discrete_map={'Selezionati': 'red', 'Altri': 'lightgrey'}
-        )
-        st.plotly_chart(fig_home, width='stretch')
+        chart_home = alt.Chart(df_home_sorted).mark_bar().encode(
+            x=alt.X('country_name:N', sort=None, title='Paese'), 
+            y=alt.Y('value:Q', title='Età (Anni)'),
+            color=alt.Color('color:N', scale=alt.Scale(domain=['Selezionati', 'Altri'], range=['red', 'lightgray']), title='Legenda'),
+            tooltip=['country_name', 'value']
+        ).properties(title=f"Età Media di Uscita di Casa ({latest_home_year})")
+        st.altair_chart(chart_home, use_container_width=True)
     else:
         st.info("Nessun dato sull'età di uscita di casa.")
 
