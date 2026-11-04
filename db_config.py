@@ -44,10 +44,12 @@ def get_db_engine():
     # Secrets solitamente arriva come dict, os.getenv come stringa. 
     # Assicura che tutte le chiavi richieste esistano
     required_keys = ['user', 'password', 'host', 'dbname']
-    if not all(key in config and config[key] for key in required_keys):
-        # logging.error("Missing database configuration details.")
-        # Registra solo se strettamente necessario per evitare rumore durante il build
-        pass
+    missing = [key for key in required_keys if not config.get(key)]
+    if missing:
+        raise ValueError(
+            f"Configurazione database incompleta, mancano: {', '.join(missing)}. "
+            "Imposta le variabili DB_USER, DB_PASSWORD, DB_HOST e DB_NAME nel file .env (vedi README)."
+        )
 
     # Gestisci tipo porta (int vs string)
     port = str(config.get('port', 5432))

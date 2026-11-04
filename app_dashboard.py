@@ -9,7 +9,6 @@ Esegui con: streamlit run app_dashboard.py
 
 import streamlit as st
 import pandas as pd
-from sqlalchemy import create_engine
 import logging
 
 from db_config import get_db_engine
@@ -118,22 +117,27 @@ def main():
     # Query 2: Povertà
     # Recupero per l'ultimo anno selezionato
     query_poverty = f"""
-        SELECT TRIM(geo) AS geo, year, 
-               CASE 
-                   WHEN TRIM(age) IN ('Y25-54', 'Y50-64') THEN 'Y25-64' -- Approssimazione per 30-70
-                   ELSE TRIM(age) 
-               END as age_group,
-               TRIM(sex) AS sex, TRIM(unit) AS unit, AVG(value) as value
-        FROM poverty_risk 
-        WHERE TRIM(geo) IN ({countries_sql}) 
+        SELECT TRIM(geo) AS geo, year, TRIM(age) AS age_group, value
+        FROM poverty_risk
+        WHERE TRIM(geo) IN ({countries_sql})
         AND year = {selected_years[1]}
-        AND TRIM(age) IN ('Y16-29', 'Y25-54', 'Y50-64') -- Giovani vs Età Media
+        AND TRIM(age) IN ('Y16-29', 'Y25-54', 'Y_GE65') -- Giovani vs Adulti vs Anziani
         AND TRIM(sex) = 'T'
         AND TRIM(unit) = 'PC' -- Percentuale
         AND TRIM(rskpovth) = 'B_60' AND TRIM(statinfo) = 'MED_EI' -- Definizione ufficiale: sotto il 60% del reddito mediano
-        GROUP BY geo, year, age_group, sex, unit
     """
     df_poverty = get_data_from_db(query_poverty)
+
+    # Query 4: Sovraccarico del Costo dell'Alloggio (ultimo anno disponibile nell'intervallo)
+    query_housing = f"""
+        SELECT TRIM(geo) AS geo, year, TRIM(age) AS age_group, value
+        FROM housing_cost
+        WHERE TRIM(geo) IN ({countries_sql})
+        AND year = (SELECT MAX(year) FROM housing_cost WHERE year <= {selected_years[1]})
+        AND TRIM(age) IN ('Y_LT18', 'Y18-64', 'Y_GE65')
+        AND TRIM(unit) = 'PC'
+    """
+    df_housing = get_data_from_db(query_housing)
 
     # Query 3: Uscita di Casa
     # Recupero per l'ultimo anno disponibile nell'intervallo (o semplicemente l'ultimo)
@@ -160,6 +164,7 @@ def main():
         st.write("**Disoccupazione** `df_unemp`:", df_unemp.head(), "\nTipi:", df_unemp.dtypes)
         st.write("**Povertà** `df_poverty`:", df_poverty.head(), "\nTipi:", df_poverty.dtypes)
         st.write("**Casa** `df_home`:", df_home.head(), "\nTipi:", df_home.dtypes)
+        st.write("**Alloggio** `df_housing`:", df_housing.head(), "\nTipi:", df_housing.dtypes)
         st.write("Selezionati:", selected_countries)
 
     # 1. Analisi Disoccupazione
@@ -233,7 +238,8 @@ def main():
              filtered_pov['age_group'] = filtered_pov['age_group'].astype(str).str.strip()
              def map_age_pov(a):
                  if 'Y16-29' in a: return 'Giovani (16-29)'
-                 if 'Y25-64' in a: return 'Adulti (25-64)'
+                 if 'Y25-54' in a: return 'Adulti (25-54)'
+                 if 'Y_GE65' in a: return 'Anziani (65+)'
                  return a
              filtered_pov['age_label'] = filtered_pov['age_group'].apply(map_age_pov)
              
@@ -242,7 +248,7 @@ def main():
              pivot_pov = pivot_pov.set_index('country_name')
              
              st.markdown(f"**Tasso di Rischio di Povertà ({latest_year})**")
-             st.bar_chart(pivot_pov, width="stretch")
+             st.bar_chart(pivot_pov, stack=False, width="stretch")  # barre affiancate: i tassi non vanno sommati
              
         else:
             st.warning(f"Nessun dato sulla povertà trovato per i paesi selezionati nell'anno {selected_years[1]}.")
@@ -268,14 +274,28 @@ def main():
         df_home['color'] = df_home['geo'].apply(lambda x: 'Selezionati' if str(x).strip() in selected_countries else 'Altri')
         df_home['geo'] = df_home['geo'].astype(str).str.strip()
         df_home['country_name'] = df_home['geo'].map(eurostat_dictionary).fillna(df_home['geo'])
-        # Ordina per valore
-        df_home_sorted = df_home.sort_values('value', ascending=False)
-        df_home_sorted = df_home_sorted.set_index('country_name')
-        
         st.markdown(f"**Età Media di Uscita di Casa ({latest_home_year})**")
-        st.bar_chart(df_home_sorted[['value']], width="stretch")
+        # Ordinato per valore decrescente, paesi selezionati evidenziati con un colore diverso
+        st.bar_chart(df_home, x='country_name', y='value', color='color', sort='-value',
+                     x_label='', y_label='Età media', width="stretch")
     else:
         st.info("Nessun dato sull'età di uscita di casa.")
+
+    # 4. Sovraccarico del Costo dell'Alloggio
+    st.header("4. Sovraccarico del Costo dell'Alloggio")
+    st.markdown("Percentuale della popolazione che vive in famiglie in cui le spese per l'abitazione superano il 40% del reddito disponibile, per fascia d'età.")
+
+    if not df_housing.empty:
+        df_housing = df_housing.copy()
+        df_housing['country_name'] = df_housing['geo'].map(eurostat_dictionary).fillna(df_housing['geo'])
+        housing_labels = {'Y_LT18': 'Under 18', 'Y18-64': '18-64', 'Y_GE65': '65+'}
+        df_housing['age_label'] = df_housing['age_group'].map(housing_labels)
+        pivot_housing = df_housing.pivot_table(index='country_name', columns='age_label', values='value')
+
+        st.markdown(f"**Tasso di Sovraccarico del Costo dell'Alloggio ({df_housing['year'].max()})**")
+        st.bar_chart(pivot_housing, stack=False, width="stretch")
+    else:
+        st.info("Nessun dato sul costo dell'alloggio disponibile per questa configurazione.")
 
     # --- Conclusioni / Approfondimenti ---
     st.markdown("---")

@@ -13,7 +13,6 @@ Requisiti:
 
 import eurostat
 import pandas as pd
-from sqlalchemy import create_engine
 import logging
 
 from db_config import get_db_engine
@@ -115,13 +114,14 @@ def load_to_postgres(data_dict, engine):
 if __name__ == "__main__":
     logging.info("Starting ETL process...")
     
-    # 1. Recupera e Pulisci
-    data = fetch_and_clean_data()
-    
-    # 2. Carica nel DB
-    # NOTA: Usiamo la configurazione da db_config.py
     try:
+        # Crea l'engine prima del download: una configurazione mancante emerge subito
         engine = get_db_engine()
+
+        # 1. Recupera e Pulisci
+        data = fetch_and_clean_data()
+
+        # 2. Carica nel DB
         load_to_postgres(data, engine)
         logging.info("ETL process finished successfully. Data loaded to DB.")
     except Exception as e:

@@ -70,6 +70,16 @@ eurostat_dictionary = {
     'KR' : 'South Korea',
     'TW' : 'Taiwan',
     'US' : 'United States',
-    'CN_X_HK' : 'China (except Hong Kong)'
+    'CN_X_HK' : 'China (except Hong Kong)',
+    # Aggregati Eurostat
+    'EU27_2020' : 'European Union (27)',
+    'EU28' : 'European Union (28)',
+    'EU27_2007' : 'European Union (27, 2007-2013)',
+    'EU' : 'European Union',
+    'EA' : 'Euro area',
+    'EA18' : 'Euro area (18)',
+    'EA19' : 'Euro area (19)',
+    'EA20' : 'Euro area (20)',
+    'EA21' : 'Euro area (21)'
     }
 
