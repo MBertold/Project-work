@@ -22,26 +22,76 @@ Il progetto è suddiviso principalmente in due script essenziali:
    - **`country_codes.py`**: Mappatura personalizzata tra i codici di Eurostat (es. 'IT', 'FR') e i corrispondenti nomi completi.
    - **`requirements.txt`**: Elenco delle dipendenze di progetto.
 
-## Installazione
+## Esecuzione in locale
 
-1. Clona o scarica il progetto
-2. Crea un virtual environment e installa le librerie necessarie:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Configura correttamente un'istanza PostgreSQL e aggiorna, se necessario, le credenziali in `db_config.py`.
+### Prerequisiti
+- **Python 3.11** o superiore
+- **PostgreSQL** (installato in locale oppure tramite Docker, vedi sotto)
+- Connessione a internet (l'ETL scarica i dati dalle API di Eurostat)
 
-## Esecuzione
+### 1. Clona il progetto e installa le dipendenze
+```bash
+git clone https://github.com/MBertold/Project-work.git
+cd Project-work
+python -m venv venv
+```
+Attiva il virtual environment:
+- **Windows (PowerShell)**: `venv\Scripts\Activate.ps1`
+- **macOS / Linux**: `source venv/bin/activate`
 
-### 1. Inizializzazione Database (Processo ETL)
-Scarica i dati più recenti ed esegui la pipeline ETL lanciando lo script apposito:
+Poi installa le librerie:
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Avvia PostgreSQL
+**Opzione A – Docker** (la più rapida):
+```bash
+docker run --name eurostat-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=eurostat -p 5432:5432 -d postgres:16
+```
+Per riavviarlo in seguito: `docker start eurostat-db`.
+
+**Opzione B – PostgreSQL installato in locale**: crea un database vuoto, ad esempio:
+```sql
+CREATE DATABASE eurostat;
+```
+
+### 3. Configura la connessione al database
+Le credenziali **non** vanno scritte in `db_config.py`: vengono lette da un file `.env` nella cartella del progetto (già escluso da git). Crealo con questo contenuto, adattando i valori alla tua installazione:
+```ini
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=eurostat
+DB_SSLMODE=disable
+```
+> **Importante:** in locale imposta `DB_SSLMODE=disable`. Il valore predefinito è `require`, pensato per i database in cloud, e fa fallire la connessione a un PostgreSQL locale senza SSL.
+
+In alternativa (ad es. su Streamlit Cloud) la dashboard legge le stesse credenziali da `.streamlit/secrets.toml`, che ha la precedenza sul `.env`:
+```toml
+[postgres]
+user = "postgres"
+password = "postgres"
+host = "localhost"
+port = 5432
+dbname = "eurostat"
+sslmode = "disable"
+```
+
+### 4. Carica i dati (processo ETL)
 ```bash
 python etl_eurostat.py
 ```
-*I dati verranno salvati all'interno delle tabelle del database PostgreSQL.*
+Lo script scarica i quattro dataset da Eurostat e crea le tabelle `unemployment`, `poverty_risk`, `leaving_home`, `housing_cost` e `country_codes` (se esistono già vengono sovrascritte). Richiede circa un minuto; il dataset sulla povertà supera il milione di righe. Rilancialo quando vuoi aggiornare i dati.
 
-### 2. Esecuzione Dashboard
-Una volta che i dati sono salvati sul database, avvia la dashboard di analisi interattiva:
+### 5. Avvia la dashboard
 ```bash
 streamlit run app_dashboard.py
 ```
+Si apre automaticamente nel browser all'indirizzo http://localhost:8501.
+
+### Risoluzione problemi
+- **`SSL is not enabled on the server` / errore di connessione**: controlla di aver impostato `DB_SSLMODE=disable` nel `.env`.
+- **`password authentication failed` o `could not connect to server`**: verifica che PostgreSQL sia avviato e che i valori del `.env` siano corretti.
+- **La dashboard mostra "Nessun dato…" o `relation "unemployment" does not exist`**: le tabelle non esistono ancora; esegui prima `python etl_eurostat.py` e controlla nel suo log che ogni tabella risulti `Successfully loaded`.
