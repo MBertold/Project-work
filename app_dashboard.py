@@ -205,6 +205,8 @@ def main():
             # Pivot the dataframe for st.line_chart
             pivot_unemp = filtered_unemp.pivot_table(index='year', columns='Serie', values='value').reset_index()
             pivot_unemp = pivot_unemp.set_index('year')
+            # Anni come etichette: da numero l'asse li mostrerebbe con il separatore delle migliaia ("2,005")
+            pivot_unemp.index = pivot_unemp.index.astype(int).astype(str)
             
             st.line_chart(pivot_unemp, width="stretch")
             
