@@ -64,20 +64,8 @@ DB_PASSWORD=postgres
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=eurostat
-DB_SSLMODE=disable
 ```
-> **Importante:** in locale imposta `DB_SSLMODE=disable`. Il valore predefinito è `require`, pensato per i database in cloud, e fa fallire la connessione a un PostgreSQL locale senza SSL.
-
-In alternativa (ad es. su Streamlit Cloud) la dashboard legge le stesse credenziali da `.streamlit/secrets.toml`, che ha la precedenza sul `.env`:
-```toml
-[postgres]
-user = "postgres"
-password = "postgres"
-host = "localhost"
-port = 5432
-dbname = "eurostat"
-sslmode = "disable"
-```
+`DB_PORT` è facoltativo (predefinito `5432`).
 
 ### 4. Carica i dati (processo ETL)
 ```bash
@@ -92,6 +80,6 @@ streamlit run app_dashboard.py
 Si apre automaticamente nel browser all'indirizzo http://localhost:8501.
 
 ### Risoluzione problemi
-- **`SSL is not enabled on the server` / errore di connessione**: controlla di aver impostato `DB_SSLMODE=disable` nel `.env`.
+- **`Configurazione database incompleta`**: manca il file `.env` o una delle variabili `DB_*`; vedi il passo 3.
 - **`password authentication failed` o `could not connect to server`**: verifica che PostgreSQL sia avviato e che i valori del `.env` siano corretti.
 - **La dashboard mostra "Nessun dato…" o `relation "unemployment" does not exist`**: le tabelle non esistono ancora; esegui prima `python etl_eurostat.py` e controlla nel suo log che ogni tabella risulti `Successfully loaded`.

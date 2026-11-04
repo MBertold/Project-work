@@ -35,7 +35,7 @@ def get_data_from_db(query):
         return pd.read_sql(query, engine)
     except Exception as e:
         st.error(f"⚠️ SQL Query Error or Database Connection Failed:\n\n{str(e)}")
-        # For debug purposes on cloud, also print the query that failed
+        # Mostra anche la query fallita, utile per il debug
         st.error(f"Query attempted:\n{query}")
         return pd.DataFrame()
 
@@ -158,7 +158,7 @@ def main():
     # --- Visualizzazioni ---
     
     # 💥 DEBUGGING UI 💥
-    if st.sidebar.checkbox("Mostra Dati Grezzi (Local/Cloud Bug)"):
+    if st.sidebar.checkbox("Mostra Dati Grezzi"):
         st.write("### 🛠 DEBUG INFO")
         st.write("Dati grezzi estratti dal DB:")
         st.write("**Disoccupazione** `df_unemp`:", df_unemp.head(), "\nTipi:", df_unemp.dtypes)
