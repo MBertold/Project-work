@@ -130,6 +130,7 @@ def main():
         AND TRIM(age) IN ('Y16-29', 'Y25-54', 'Y50-64') -- Giovani vs Età Media
         AND TRIM(sex) = 'T'
         AND TRIM(unit) = 'PC' -- Percentuale
+        AND TRIM(rskpovth) = 'B_60' AND TRIM(statinfo) = 'MED_EI' -- Definizione ufficiale: sotto il 60% del reddito mediano
         GROUP BY geo, year, age_group, sex, unit
     """
     df_poverty = get_data_from_db(query_poverty)
@@ -198,9 +199,9 @@ def main():
             
             # Pivot the dataframe for st.line_chart
             pivot_unemp = filtered_unemp.pivot_table(index='year', columns='Serie', values='value').reset_index()
-            pivot_unemp.set_index('year', inplace=True)
+            pivot_unemp = pivot_unemp.set_index('year')
             
-            st.line_chart(pivot_unemp, use_container_width=True)
+            st.line_chart(pivot_unemp, width="stretch")
             
         else:
             st.info("Nessun dato sulla disoccupazione disponibile per questa configurazione.")
@@ -238,10 +239,10 @@ def main():
              
              # Per avere i gruppi affiancati, facciamo pivot su Fascia Età
              pivot_pov = filtered_pov.pivot_table(index='country_name', columns='age_label', values='value').reset_index()
-             pivot_pov.set_index('country_name', inplace=True)
+             pivot_pov = pivot_pov.set_index('country_name')
              
              st.markdown(f"**Tasso di Rischio di Povertà ({latest_year})**")
-             st.bar_chart(pivot_pov, use_container_width=True)
+             st.bar_chart(pivot_pov, width="stretch")
              
         else:
             st.warning(f"Nessun dato sulla povertà trovato per i paesi selezionati nell'anno {selected_years[1]}.")
@@ -269,10 +270,10 @@ def main():
         df_home['country_name'] = df_home['geo'].map(eurostat_dictionary).fillna(df_home['geo'])
         # Ordina per valore
         df_home_sorted = df_home.sort_values('value', ascending=False)
-        df_home_sorted.set_index('country_name', inplace=True)
+        df_home_sorted = df_home_sorted.set_index('country_name')
         
         st.markdown(f"**Età Media di Uscita di Casa ({latest_home_year})**")
-        st.bar_chart(df_home_sorted[['value']], use_container_width=True)
+        st.bar_chart(df_home_sorted[['value']], width="stretch")
     else:
         st.info("Nessun dato sull'età di uscita di casa.")
 
